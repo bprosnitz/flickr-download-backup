@@ -1,37 +1,14 @@
 Introduction
 ============
 
-Simple script to download a [Flickr](http://flickr.com) set:
+Small modification to beaufour's flickr-download to download all the photos for a user.
 
-    flickr_download -k <api key> -s <api secret> -d <set id>
+Usage:
 
-It can also list the set ids for a given user:
-
-    flickr_download -k <api key> -s <api secret> -l <user name>
-
-Get your [Flickr API key](http://www.flickr.com/services/api/).
-
-You can also set your API key and secret in `~/.flickr_download`:
-
-    api_key: my_key
-    api_secret: my_secret
-
-
-[![Build Status](https://travis-ci.org/beaufour/flickr-download.svg)](https://travis-ci.org/beaufour/flickr-download)
-
-
-User Authentication Support
-===========================
-
-The script also allows you to authenticate as your user account. That way you can download sets that
-are private and public photos that are restricted. To use this mode, pass in `-t` to the script too.
-
-The setup the first time is slightly hacky, but it works :)
-
-Requirements
-============
-
-* [argparse](http://docs.python.org/2.7/library/argparse.html) (Python 2.7+)
-* [Python Dateutil](http://labix.org/python-dateutil)
-* [Python Flickr API](https://github.com/alexis-mignon/python-flickr-api/)
-* [PyYAML](http://pyyaml.org/)
+1. Get a Flickr API key and secret
+2. Clone this repo
+3. Install PyYaml and flickr_api with pip or whatever tool you prefer
+4. Use the flickr user id getter to get your user id http://idgettr.com/
+5. run flickr_download -k <api key> -s <api secret> -u <flickr user id>
+6. Go through the OAuth flow and follow the instructions
+7. Photos will appear in your current directory
