@@ -19,8 +19,8 @@ from flickr_api.flickrerrors import FlickrAPIError
 from dateutil import parser
 import yaml
 
-from flickr_download.filename_handlers import get_filename_handler
-from flickr_download.utils import get_full_path
+from filename_handlers import get_filename_handler
+from utils import get_full_path
 
 CONFIG_FILE = "~/.flickr_download"
 OAUTH_TOKEN_FILE = "~/.flickr_token"
@@ -82,7 +82,7 @@ def _load_defaults():
     return {}
 
 
-def download_set(set_id, get_filename, size_label=None):
+def download(user_id, get_filename):
     """
     Download the set with 'set_id' to the current directory.
 
@@ -90,25 +90,26 @@ def download_set(set_id, get_filename, size_label=None):
     @param get_filename: Function, function that creates a filename for the photo
     @param size_label: str|None, size to download (or None for largest available)
     """
-    suffix = " ({})".format(size_label) if size_label else ""
-    pset = Flickr.Photoset(id=set_id)
-    photos = pset.getPhotos()
-    pagenum = 2
+    suffix = ""
+    user = Flickr.test.login()
+    photos = []
+    pagenum = 1
     while True:
         try:
-            page = pset.getPhotos(page=pagenum)
+            print('getting page {0}'.format(pagenum))
+            page = user.getPhotos(user_id=user_id,per_page=500,page=pagenum)
             photos.extend(page)
+            print(len(photos))
             pagenum += 1
+	    if len(photos) % 500 != 0:
+              break
         except FlickrAPIError as ex:
             if ex.code == 1:
                 break
             raise
-
-    if not os.path.exists(pset.title):
-        os.mkdir(pset.title)
-
+    
     for photo in photos:
-        fname = get_full_path(pset.title, get_filename(pset, photo, suffix))
+        fname = get_filename(photo, suffix)
         if os.path.exists(fname):
             # TODO: Ideally we should check for file size / md5 here
             # to handle failed downloads.
@@ -116,7 +117,7 @@ def download_set(set_id, get_filename, size_label=None):
             continue
 
         print('Saving: {0}'.format(fname))
-        photo.save(fname, size_label)
+        photo.save(fname, None)
 
         # Set file times to when the photo was taken
         info = photo.getInfo()
@@ -125,48 +126,17 @@ def download_set(set_id, get_filename, size_label=None):
         os.utime(fname, (taken_unix, taken_unix))
 
 
-def download_user(username, get_filename, size_label):
-    """
-    Download all the sets owned by the given user.
 
-    @param username: str, username
-    @param get_filename: Function, function that creates a filename for the photo
-    @param size_label: str|None, size to download (or None for largest available)
-    """
-    user = Flickr.Person.findByUserName(username)
-    photosets = user.getPhotosets()
-    for photoset in photosets:
-        download_set(photoset.id, get_filename, size_label)
-
-
-def print_sets(username):
-    """
-    Print all sets for the given user
-
-    @param username: str,
-    """
-    user = Flickr.Person.findByUserName(username)
-    photosets = user.getPhotosets()
-    for photo in photosets:
-        print('{0} - {1}'.format(photo.id, photo.title))
 
 
 def main():
     parser = argparse.ArgumentParser('Download a Flickr Set')
     parser.add_argument('-k', '--api_key', type=str,
                         help='Flickr API key')
+    parser.add_argument('-u', '--user_id', type=str,
+                        help='Flickr User ID')
     parser.add_argument('-s', '--api_secret', type=str,
                         help='Flickr API secret')
-    parser.add_argument('-t', '--user_auth', action='store_true',
-                        help='Enable user authentication')
-    parser.add_argument('-l', '--list', type=str, metavar='USER',
-                        help='List photosets for a user')
-    parser.add_argument('-d', '--download', type=str, metavar='SET_ID',
-                        help='Download the given set')
-    parser.add_argument('-u', '--download_user', type=str, metavar='USERNAME',
-                        help='Download all sets for a given user')
-    parser.add_argument('-q', '--quality', type=str, metavar='SIZE_LABEL',
-                        default=None, help='Quality of the picture')
     parser.add_argument('-n', '--naming', type=str, metavar='NAMING_MODE',
                         default='title', help='Photo naming mode')
     parser.set_defaults(**_load_defaults())
@@ -177,25 +147,12 @@ def main():
         print ('You need to pass in both "api_key" and "api_secret" arguments', file=sys.stderr)
         return 1
 
-    ret = _init(args.api_key, args.api_secret, args.user_auth)
+    ret = _init(args.api_key, args.api_secret, True)
     if not ret:
         return 1
 
-    if args.list:
-        print_sets(args.list)
-    elif args.download or args.download_user:
-        try:
-            get_filename = get_filename_handler(args.naming)
-            if args.download:
-                download_set(args.download, get_filename, args.quality)
-            else:
-                download_user(args.download_user, get_filename, args.quality)
-        except KeyboardInterrupt:
-            print('Forcefully aborting. Last photo download might be partial :(', file=sys.stderr)
-    else:
-        print('ERROR: Must pass either --list or --download\n', file=sys.stderr)
-        parser.print_help()
-        return 1
+    get_filename = get_filename_handler(args.naming)
+    download(args.user_id, get_filename)
 
 if __name__ == '__main__':
     sys.exit(main())
