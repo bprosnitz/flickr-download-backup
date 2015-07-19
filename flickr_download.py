@@ -105,12 +105,12 @@ def download(user_id, fast_forward=False):
             raise
     
     for photo in photos:
-        if fast_forward and is_similar_file('-{0}-{1}.jpg'.format(photo.title, photo.id)):
+        if fast_forward and is_similar_file('-{0}.jpg'.format(photo.id).replace('/', '-')):
             continue
         info = photo.getInfo()
         taken = parser.parse(info['taken'])
         taken_unix = time.mktime(taken.timetuple())
-        fname = '{0}-{1}-{2}.jpg'.format(taken_unix, photo.title, photo.id)
+        fname = '{0}-{1}-{2}.jpg'.format(taken_unix, photo.title, photo.id).replace('/', '-')
         if os.path.exists(fname):
             # TODO: Ideally we should check for file size / md5 here
             # to handle failed downloads.
@@ -118,7 +118,11 @@ def download(user_id, fast_forward=False):
             continue
 
         print('Saving: {0}'.format(fname))
-        photo.save(fname, None)
+        try:
+            photo.save(fname, None)
+        except:
+            time.sleep(5)
+            photo.save(fname, None)
 
         # Set file times to when the photo was taken
         os.utime(fname, (taken_unix, taken_unix))
@@ -135,7 +139,7 @@ def main():
                         help='Flickr User ID')
     parser.add_argument('-s', '--api_secret', type=str,
                         help='Flickr API secret')
-    parser.add_argument('--fast_forward', action='store_true',
+    parser.add_argument('--no_fast_forward', action='store_true',
 			help='Don\'t check for the existance of all files by exact file name, skip some for performance')
     parser.set_defaults(**_load_defaults())
 
@@ -149,7 +153,11 @@ def main():
     if not ret:
         return 1
 
-    download(args.user_id, args.fast_forward)
+    fast_forward = True
+    if args.no_fast_forward:
+        fast_forward = False
+
+    download(args.user_id, fast_forward)
 
 if __name__ == '__main__':
     sys.exit(main())
