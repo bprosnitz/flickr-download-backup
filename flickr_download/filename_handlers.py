@@ -83,7 +83,7 @@ HANDLERS = {
 }
 
 
-def get_filename_handler(name='title'):
+def get_filename_handler(name='title_and_id'):
     """
     Returns the given filename handler as a function
     @param name: str, name of the handler to return
