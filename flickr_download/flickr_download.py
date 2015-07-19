@@ -138,7 +138,7 @@ def main():
     parser.add_argument('-s', '--api_secret', type=str,
                         help='Flickr API secret')
     parser.add_argument('-n', '--naming', type=str, metavar='NAMING_MODE',
-                        default='title', help='Photo naming mode')
+                        default='title_and_id', help='Photo naming mode')
     parser.set_defaults(**_load_defaults())
 
     args = parser.parse_args()
